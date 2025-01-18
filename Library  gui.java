@@ -1,0 +1,451 @@
+//package ExcelFile;
+
+import java.io.*;
+import java.util.Scanner;
+
+import javax.swing.*;
+
+import org.apache.poi.sl.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+interface input{
+    Scanner sc = new Scanner(System.in);
+}
+
+class Lib implements input{
+    Console cnsl = System.console();
+    String ch;
+    int session;
+    int studentRowNo,bookRowNo;
+    int bookColumnNo,studentColumnNo;
+    String studentExcelPath = "C:\\Users\\DOS\\OneDrive\\Code java\\ImportantQuestions\\Library\\ExcelLibrary\\Record\\Student.xlsx"; 
+    String bookExcelPath = "C:\\Users\\DOS\\OneDrive\\Code java\\Library\\Book.xlsx";
+    ReadFile read_obj = new ReadFile();
+    WriteFile write_obj = new WriteFile();
+    private String adminPassword="PscBcALib@85";
+    private final String MasterKey ="Rohit@1928";
+    String login(){
+        System.out.println("1) Login as Admin\n2) Login as student\n3) Forgot Admin Password");
+        ch = sc.nextLine();
+        ch = ch.toLowerCase();
+        ch = ch.replaceAll(" ","");
+        return ch;
+    }
+    boolean studentVerification(){
+        if(read_obj.getSessionAndRoll()){
+            read_obj.intialize(studentExcelPath,null);
+            int rowCount = read_obj.getRowCount();
+            for(int i=0;i<rowCount;i++){
+                if(read_obj.checkData(i,1,read_obj.roll)){
+                    studentRowNo =i;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    boolean checkPassword(String UserPassword){
+        //char[] ch = cnsl.readPassword("Enter password : ");
+       // String enteredPassword = String.valueOf(ch);
+    	System.out.print("Enter password");
+    	String enteredPassword = sc.nextLine();
+        if(enteredPassword.equals(UserPassword)){
+            return true;
+        }
+        return false;
+    } 
+    void forgotPassword(){
+        //char[] ch = cnsl.readPassword("Enter MasterKey : ");
+        //String enteredPassword = String.valueOf(ch);
+    	System.out.println("Enter masterkey");
+    	String enteredPassword = sc.next();
+        if(enteredPassword.equals(MasterKey)){
+            System.out.print("Enter new password: ");
+            adminPassword = sc.next();
+            System.out.println();
+        }
+        else{
+            System.out.println("Entered Masterkey is incorrect");
+        }
+    }
+    class Admin{
+        String ch;
+        void adminAccess(){
+            System.out.println("Enter Function to be performed :-");
+            System.out.println("1) Register a student\n2) Show Student Record");
+            System.out.println("3)Change Admin Password");
+            ch = sc.nextLine();
+            ch = ch.toLowerCase();
+            ch = ch.replaceAll(" ", "");
+        }
+        boolean checkAdminPassword(){
+            return checkPassword(adminPassword);
+        }
+        void directMethods() {
+            if(ch.equals("1")||ch.equals("register")||ch.equals("registerastudent")){
+                read_obj.getSessionAndRoll();
+                Object [][] newStudent = new Object[1][5];
+                System.out.print("Enter class Roll number: ");
+                newStudent[0][0] = sc.nextInt();
+                System.out.print("Enter name: ");
+                newStudent[0][1]= sc.nextLine();
+                System.out.print("Enter Unviersity registration number: ");
+                newStudent[0][2]= sc.nextLine();
+                System.out.print("Create password: ");   
+                newStudent[0][3]= sc.nextLine();
+                newStudent[0][4]= 3;
+                write_obj.intialize(studentExcelPath, null);
+                write_obj.registerStudent(newStudent);
+            }
+            else if(ch.equals("2")||ch.equals("show")||ch.equals("showstudentrecord")){
+                if(studentVerification())
+                    read_obj.printData(studentRowNo);
+            }
+            else if (ch.equals("3")||ch.equals("change")||ch.equals("changeadminpassword")){
+                if(checkAdminPassword()){
+                    System.out.print("Enter new password: ");
+                    adminPassword = sc.next();
+                }
+                else{
+                    System.out.println("Entered password is incorrect.");
+                }
+            }
+            else{
+                System.out.println("Invalid choice.");
+            }
+        }
+    }
+    
+    class StudentLogin{
+        String studentPassword;
+        boolean login() {
+            if(studentVerification()){
+                read_obj.checkData(studentRowNo,3,"");
+                studentPassword = (String) read_obj.data;
+                checkPassword(studentPassword);
+            }
+            return false;
+        } 
+        void choice(){
+            System.out.println("Enter Function to be performed :-");
+            System.out.println("1) Issue book(s)\n2) Return book(s)");
+            System.out.println("3) Change Password\n4) Forgot Password");
+            ch = sc.nextLine();
+            ch = ch.toLowerCase();
+            ch = ch.replaceAll(" ", "");
+        }
+        void directMethods(){
+            if(ch.equals("1")||ch.equals("issue")||ch.equals("issuebook")){
+                read_obj.checkData(studentRowNo,4,"");
+                int noOfIssuableBooks = (Integer) read_obj.data;
+                read_obj.checkData(bookRowNo,8,"");
+                int noOfBooksIssued = (Integer) read_obj.data;
+                String book = bookData();
+                read_obj.intialize(bookExcelPath,"Sheet1");
+                bookRowNo = read_obj.getRowCount();
+                for(int i=0;i<bookRowNo;i++){
+                    if(read_obj.checkData(i,bookColumnNo,book)){
+                        read_obj.checkData(i,5,"");
+                        int noOfBookAvailable = (Integer) read_obj.data;
+                        if(noOfBookAvailable>0){
+                            read_obj.checkData(i,3,"");
+                            write_obj.intialize(studentExcelPath,null);
+                            write_obj.editData(studentRowNo,8-noOfIssuableBooks,read_obj.data);
+                            write_obj.editData(studentRowNo,4,noOfIssuableBooks-1);
+                            write_obj.editData(studentRowNo,8,noOfBooksIssued+1);
+                            write_obj.intialize(bookExcelPath,"Sheet1");
+                            write_obj.editData(bookRowNo,5,noOfBookAvailable-1);
+                            System.out.println("Book successfully issued");
+                            break;
+                        }
+                    }
+                }    
+            }
+            else if(ch.equals("2")||ch.equals("return")||ch.equals("returnbook")){
+                read_obj.checkData(studentRowNo,4,"");
+                int noOfIssuableBooks = (Integer) read_obj.data;
+                String book = bookData();
+                read_obj.intialize(bookExcelPath,"Sheet1");
+                bookRowNo = read_obj.getRowCount();
+                for(int i=0;i<bookRowNo;i++){
+                    if(read_obj.checkData(i,bookColumnNo,book)){
+                        read_obj.checkData(i,5,"");
+                        int noOfBookAvailable = (Integer) read_obj.data;
+                        read_obj.checkData(i,3,"");
+                        String bookCode = (String) read_obj.data;
+                        read_obj.intialize(studentExcelPath, null);
+                        for(int j=5;i<8;i++){
+                            if(read_obj.checkData(studentRowNo,j, bookCode)){
+                                studentColumnNo = (Integer)read_obj.data;
+                                write_obj.intialize(studentExcelPath, null);
+                                write_obj.editData(studentRowNo, j, "null");
+                                write_obj.editData(studentRowNo, j, noOfIssuableBooks+1);
+                                write_obj.editData(bookRowNo, 5,noOfBookAvailable+1);
+                                System.out.println("Book has been successfully returned");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            else if (ch.equals("3")||ch.equals("change")||ch.equals("changepassword")){
+                if(checkPassword(studentPassword)){
+                    System.out.print("Enter new password: ");
+                    studentPassword = sc.next();
+                    write_obj.editData(studentRowNo, 3, studentPassword);
+                }
+                else{
+                    System.out.println("Entered password is incorrect.");
+                }
+            }
+            else if(ch.equals("4")||ch.equals("forgot")||ch.equals("forgotpassword")){
+                Admin obj = new Admin();
+            	System.out.println("Enter admin password to reset password");
+                if(obj.checkAdminPassword()){
+                    System.out.print("Enter new password: ");
+                    studentPassword = sc.next();
+                    write_obj.editData(studentRowNo, 3, studentPassword);
+                }
+                else{
+                    System.out.println("Entered password is incorrect.");
+                }
+            }
+            else{
+                System.out.println("Invalid choice.");
+            }
+        }
+    }
+       String bookData(){
+            System.out.println("1) Enter Book Id or \n2) Enter Serial Number");
+            System.out.println("3) Enter Name of the book\n4) Enter Book Code");
+            String bookchoice = sc.nextLine();
+            bookchoice = bookchoice.toLowerCase();
+            bookchoice = bookchoice.replaceAll(" ","");
+            if(bookchoice.equals("1")||bookchoice.equals("bookid")||bookchoice.equals("enterbookid")){
+                bookColumnNo = 2;
+                System.out.println("Enter Book Id");
+                return sc.next();
+            }
+            else if(bookchoice.equals("2")||bookchoice.equals("serialnumber")||bookchoice.equals("enterserialnumber")){
+                bookColumnNo = 1;
+                System.out.println("Enter book serial number");
+                return sc.next();
+            }
+            else if(bookchoice.equals("3")||bookchoice.equals("name")||bookchoice.equals("enternameofthebook")){
+                bookColumnNo = 0;
+                System.out.println("Enter name of the book");
+                return sc.next();
+            }
+            else if(bookchoice.equals("4")||bookchoice.equals("bookcode")||bookchoice.equals("enterbookcode")){
+                bookColumnNo = 3;
+                System.out.println("Enter Book Code");
+                return sc.next();
+            }
+            else{
+                System.out.println("Entered choice is incorrect.");
+                return "0";
+            }
+	}        
+}    
+
+class StudentCredential implements input{
+    String sheetName;
+    int roll;
+    int session;
+    boolean checkSession(){
+        int flag=0;
+        System.out.print("Enter start year of session: ");
+        session = sc.nextInt();
+        if(session/100==0||session/10000==0){
+            if(session==22||session==21||session==23){
+                flag = 1;
+            }
+            else if(session==2022||session==2021||session==2023){
+                session = session%100;
+                flag=1;
+            }
+        }
+        if(flag==1){
+            if(session==22){
+                sheetName ="Session22_25";
+                return true;
+            }
+            else if(session ==23){
+                sheetName ="Session23_26";
+                return true;
+            }
+            else if(session ==21){
+                sheetName ="Session21_24";
+                return true;
+            }
+        }
+        else{
+            System.out.println("Entered session is incorrect");
+            return false;
+        }
+        return false;
+    }
+    void inputRollNo(){
+        System.out.print("Enter your class roll number: ");
+        roll = sc.nextInt();
+        
+    }
+}
+class ReadFile extends StudentCredential{
+    XSSFWorkbook workbook;
+    String ExcelPath= "C:\\Users\\DOS\\OneDrive\\Code java\\ImportantQuestions\\Library\\ExcelLibrary\\Record\\Student.xlsx";
+    XSSFSheet sheet;
+    DataFormatter formatter;
+    int rowCount;
+    int flag=0,rowNo=0;
+    Object data;
+    
+    boolean getSessionAndRoll(){
+        if(checkSession()){
+            inputRollNo();
+            return true;
+        }
+        return false;
+    }
+    void intialize(String ExcelPath,String sheetName){
+        this.ExcelPath = ExcelPath;
+        if(sheetName == null){
+            sheetName = this.sheetName;
+        }
+        try {
+            workbook = new XSSFWorkbook(ExcelPath);
+            sheet = workbook.getSheet(sheetName);
+            formatter = new DataFormatter();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    int getRowCount(){
+        rowCount = sheet.getPhysicalNumberOfRows();
+        return rowCount;
+	}
+    boolean checkData(int r,int c,Object value) {
+        data = formatter.formatCellValue(sheet.getRow(r).getCell(c));
+            if(value.equals(data)){
+                return true;
+            }
+            return false;
+    }
+    void printData(int r){
+        Object [][] data = new Object[2][6];
+        for(int i=0;i<5;i++){
+            data[0][i] = formatter.formatCellValue(sheet.getRow(0).getCell(i));
+        }
+        data[0][5] = formatter.formatCellValue(sheet.getRow(0).getCell(8));
+        for(int i=0;i<5;i++){
+            data[1][i] = formatter.formatCellValue(sheet.getRow(r).getCell(i));
+        }
+        data[1][5] = formatter.formatCellValue(sheet.getRow(r).getCell(8));
+        JFrame f = new JFrame();
+        Object[] column= new Object[6];
+        for(int i=0;i<6;i++){
+            column[i] = formatter.formatCellValue(sheet.getRow(r).getCell(i));
+        }
+        JTable jt=new JTable(data,column);    
+        jt.setBounds(30,40,200,300);          
+        JScrollPane sp=new JScrollPane(jt);    
+        f.add(sp);          
+        f.setSize(300,400);    
+        f.setVisible(true);
+    }
+}
+class WriteFile extends StudentCredential{
+    String ExcelPath;
+    File xlsxFile;
+    String sheetName;
+    FileInputStream inputStream;
+    Workbook workbook;
+    Sheet<?, ?> sheet;
+    void intialize(String ExcelPath,String sheetName){
+        this.ExcelPath = ExcelPath;
+        if(sheetName == null){
+            sheetName = this.sheetName;
+        }
+        xlsxFile= new File(ExcelPath);
+        try {
+        inputStream = new FileInputStream(xlsxFile);
+        workbook = WorkbookFactory.create(inputStream);
+        sheet = (Sheet<?, ?>) workbook.getSheet(sheetName);
+        }catch(IOException e) {
+        	e.printStackTrace();
+        }
+    }  
+    
+    void registerStudent(Object [][]newStudent){
+        int rowCount = ((XSSFSheet) sheet).getLastRowNum();
+        for (Object[] student : newStudent) {
+            Row row = ((XSSFSheet) sheet).createRow(++rowCount);
+            int columnCount = 0;
+            for (Object info : student) {
+                Cell cell = row.createCell(columnCount++);
+                if (info instanceof String) {
+                    cell.setCellValue((String) info);
+                } 
+                else if (info instanceof Integer) {
+                    cell.setCellValue((Integer) info);
+                }
+            }
+        }
+			fileClose();		
+        System.out.println("Student has been registered successfully.");  
+    }
+    void editData(int r,int c,Object value){
+        Cell cell= ((XSSFSheet) sheet).getRow(r).getCell(c);
+        if (value instanceof String) {
+            cell.setCellValue((String) value);
+        } else if (value instanceof Integer) {
+            cell.setCellValue((Integer) value);
+        }
+        fileClose();    
+        System.out.println("Update successfully.");
+    }
+    void fileClose() {
+    	try {
+        inputStream.close();
+        FileOutputStream os = new FileOutputStream(xlsxFile);
+        workbook.write(os);
+        workbook.close();
+        os.close();
+    	}catch(IOException e) {
+    		e.printStackTrace();
+    	}
+    }
+}
+
+public class Library{
+    public static void main(String[] args) {
+        System.out.println(" WELCOME TO THE DIGITAL LIBRARY OF BCA");
+        Lib lib_obj = new Lib();
+        String login = lib_obj.login();
+        if(login.equals("1")||login.equals("admin")||login.equals("loginasadmin")){
+            Lib.Admin Admin_obj = lib_obj.new Admin();
+            if(Admin_obj.checkAdminPassword()){
+                Admin_obj.adminAccess();
+                Admin_obj.directMethods();
+            }
+            else{
+                System.out.println("Entered password is incorrect.");
+                System.out.println("Login Unsuccessful.");
+            }
+        }
+        else if(login.equals("2")||login.equals("student")||login.equals("loginasstudent")){
+            Lib.StudentLogin Stu_obj = lib_obj.new StudentLogin();
+            Stu_obj.login();
+            Stu_obj.choice();
+            Stu_obj.directMethods();
+        }
+        else if(login.equals("3")||login.equals("forgot")||login.equals("forgotadminpassword")){
+           lib_obj.forgotPassword();
+        }
+        else {
+        	System.out.println("Entered choice is not correct.");
+        }
+    }
+}
